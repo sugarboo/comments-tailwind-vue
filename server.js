@@ -22,6 +22,16 @@ app.get('/comments', async (req, res) => {
   }
 })
 
+app.post('/comments', async (req, res) => {
+  try {
+    await addComments(req.body)
+    res.sendStatus(201)
+  } catch (error) {
+    console.log(error)
+    res.sendStatus(500)
+  }
+})
+
 const getAllComments = async() => {
   try {
     const { results = [] } = await notion.databases.query({ database_id: NOTION_DB_ID })
@@ -53,6 +63,59 @@ const getAllComments = async() => {
   } catch (error) {
     console.log('getAllComments', error)
   }
+}
+
+const addComments = async ({ content, replyTo = '' }) => {
+  const id = (await notion.databases.query({ database_id: NOTION_DB_ID })).results.length + 1
+  const { avatar_url, name } = await notion.users.retrieve({ user_id: NOTION_CURR_USER_ID })
+  notion.request({
+    method: 'POST',
+    path: 'pages',
+    body: {
+      parent: { database_id: NOTION_DB_ID },
+      properties: {
+        id: {
+          title: [
+            {
+              text: {
+                content: id.toString()
+              }
+            }
+          ]
+        },
+        user: {
+          rich_text: [
+            {
+              text: {
+                content: name
+              }
+            }
+          ]
+        },
+        avatar: {
+          url: avatar_url
+        },
+        content: {
+          rich_text: [
+            {
+              text: {
+                content
+              }
+            }
+          ]
+        },
+        ...(replyTo && {
+          replyTo: {
+            relation: [
+              {
+                id: replyTo
+              }
+            ]
+          }
+        })
+      }
+    }
+  })
 }
 
 app.listen(port, () => {
