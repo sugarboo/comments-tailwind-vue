@@ -60,8 +60,14 @@ const addNewCommentData = async (content, replyTo) => {
         ...(replyTo && { replyTo })
       })
     })
-    setTimeout(async () => {
-      await getAllCommentsData()
+    // const newComment = res.json()
+    // if(!replyTo) {
+    //   comments.value.unshift(newComment)
+    // } else {
+    //   comments.value.find((comment) => comment.id === replyTo).replies.unshift(newComment)
+    // }
+    setTimeout(() => {
+      getAllCommentsData()
     }, 1000)
   } catch (error) {
     console.log('addNewCommentData', error)

@@ -1,6 +1,7 @@
 import express from 'express'
 import { Client } from '@notionhq/client'
 import { config } from 'dotenv'
+import { transformPageObject } from './util.js'
 const {
   NOTION_KEY,
   NOTION_DB_ID,
@@ -24,8 +25,8 @@ app.get('/comments', async (req, res) => {
 
 app.post('/comments', async (req, res) => {
   try {
-    await addComments(req.body)
-    res.sendStatus(201)
+    const newPage = await addComments(req.body)
+    res.sendStatus(201).json(newPage)
   } catch (error) {
     console.log(error)
     res.sendStatus(500)
@@ -40,15 +41,7 @@ const getAllComments = async() => {
 
     results.forEach((page) => {
       const { id, properties } = page
-      comments.set(id, {
-        id: id,
-        user: properties?.user.rich_text[0]?.plain_text,
-        time: properties?.time.created_time,
-        content: properties?.content?.rich_text[0]?.plain_text,
-        avatar: properties?.avatar?.url,
-        replies: properties?.replies?.relation,
-        replyTo: properties?.replyTo?.relation[0]?.id
-      })
+      comments.set(id, transformPageObject(id, properties))
     })
 
     const commentsPopulated = [...comments.values()].reduce((acc, curr) => {
@@ -68,7 +61,8 @@ const getAllComments = async() => {
 const addComments = async ({ content, replyTo = '' }) => {
   const id = (await notion.databases.query({ database_id: NOTION_DB_ID })).results.length + 1
   const { avatar_url, name } = await notion.users.retrieve({ user_id: NOTION_CURR_USER_ID })
-  notion.request({
+  // const page = await notion.request({
+  await notion.request({
     method: 'POST',
     path: 'pages',
     body: {
@@ -116,6 +110,7 @@ const addComments = async ({ content, replyTo = '' }) => {
       }
     }
   })
+  // return transformPageObject(page.properties)
 }
 
 app.listen(port, () => {
